@@ -1,0 +1,63 @@
+{
+  "contract": "math",
+  "generatedAt": "2026-03-25T00:23:01.564Z",
+  "methods": [
+    {
+      "name": "max_uint64_uint64",
+      "label": "max_uint64_uint64",
+      "description": "Auto-generated form for max_uint64_uint64",
+      "inputs": [
+        {
+          "name": "a",
+          "type": "u64",
+          "rawType": "u64",
+          "label": "a",
+          "placeholder": "Enter a"
+        },
+        {
+          "name": "b",
+          "type": "u64",
+          "rawType": "u64",
+          "label": "b",
+          "placeholder": "Enter b"
+        }
+      ],
+      "output": {
+        "type": "u64",
+        "rawType": "u64"
+      }
+    },
+    {
+      "name": "max_uint64_uint64_uint64",
+      "label": "max_uint64_uint64_uint64",
+      "description": "Auto-generated form for max_uint64_uint64_uint64",
+      "inputs": [
+        {
+          "name": "a",
+          "type": "u64",
+          "rawType": "u64",
+          "label": "a",
+          "placeholder": "Enter a"
+        },
+        {
+          "name": "b",
+          "type": "u64",
+          "rawType": "u64",
+          "label": "b",
+          "placeholder": "Enter b"
+        },
+        {
+          "name": "c",
+          "type": "u64",
+          "rawType": "u64",
+          "label": "c",
+          "placeholder": "Enter c"
+        }
+      ],
+      "output": {
+        "type": "u64",
+        "rawType": "u64"
+      }
+    }
+  ]
+}
