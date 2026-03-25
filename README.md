@@ -1,26 +1,39 @@
-# Solidity Solang Dapp
+# Solidity Solang Dapp (SolidJS Template)
 
-A minimal Solang + Soroban demo that pairs a Solidity contract with a SolidJS frontend that auto-generates a contract UI from the deployed contract interface.
+A SolidJS frontend that auto-generates a contract UI from Soroban-compatible Solidity contracts compiled with Solang. This repo emphasizes Solidity-first development and generates diagrams to make the build/deploy/runtime flow easy to understand.
 
-## Repo Layout
-- `solidity-contracts/` – Solidity sources compiled with Solang (Soroban target)
+**Features**
+- Solidity contracts compiled with Solang (Soroban target)
+- Auto-generated UI forms from the contract interface
+- One-command build + deploy + binding generation
+- TypeScript contract clients and bindings
+- Schema-driven UI rendering (no hardcoded methods)
+- Diagrams documenting the flow and generated artifacts
+
+**Repo Layout**
+- `solidity-contracts/` – Solidity sources compiled with Solang
 - `solang-template-solid/` – SolidJS UI, deployment scripts, generated bindings
+- `solang-template-solid/packages/` – Generated TypeScript bindings per contract
+- `solang-template-solid/src/generated/contract-schema.json` – UI schema derived from the contract interface
 
-## Prerequisites
-- Node.js
+**Screenshots**
+![Contract Incrementer](solang-template-solid/screenshots/a.png)
+![Contract Math](solang-template-solid/screenshots/b.png)
+
+**Prerequisites**
+- Node.js + npm (or pnpm/yarn)
+- Solang compiler (`solang`)
 - Stellar CLI (`stellar`) with Soroban support
-- Solang compiler installed and on PATH
+- Access to a Soroban network (testnet by default)
 
-## Quick Start
-1. Install frontend deps
+**Quick Start (pnpm)**
+1. Install dependencies
 ```bash
 cd solang-template-solid
-npm install
+pnpm install
 ```
-
 2. Configure `.env`
 ```bash
-# solang-template-solid/.env
 PUBLIC_STELLAR_NETWORK="testnet"
 PUBLIC_STELLAR_NETWORK_PASSPHRASE="Test SDF Network ; September 2015"
 PUBLIC_STELLAR_RPC_URL="https://soroban-testnet.stellar.org"
@@ -29,23 +42,60 @@ PUBLIC_STELLAR_ACCOUNT="test1"
 PUBLIC_STELLAR_CONTRACT_PATH="../solidity-contracts/newcontract"
 PUBLIC_SOLANG_SOURCE="contract.sol"
 PUBLIC_SOLANG_OUTDIR="build"
-
-PUBLIC_SOLANG_COMPILE_COMMAND='solang compile --target soroban --output "build" "contract.sol"'
+```
+3. Initialize + run (single command)
+```bash
+pnpm run dev
 ```
 
-3. Build, deploy, and generate bindings
+**Manual Run (step-by-step)**
 ```bash
+cd solang-template-solid
 node initialize.js
+pnpm run dev
 ```
 
-4. Run the app
-```bash
-npm run dev
+**Program Flow**
+1. `initialize.js` compiles the Solidity contracts in `PUBLIC_STELLAR_CONTRACT_PATH` using Solang (target `soroban`).
+2. It deploys each compiled WASM contract to the configured Stellar network and captures the deployed contract IDs.
+3. It generates TypeScript bindings for each contract in `packages/<alias>` and installs them into the app.
+4. It writes contract clients to `src/contracts/<alias>.ts` and updates `src/contracts/current.ts` to point at the latest deployed contract.
+5. It generates `src/generated/contract-schema.json` from the contract interface.
+6. The UI in `src/App.tsx` reads `contract-schema.json` to render dynamic forms and uses `src/contracts/current.ts` to call the deployed contract.
+
+**Flow Diagram**
+```mermaid
+flowchart TD
+  A[Solidity contracts in PUBLIC_STELLAR_CONTRACT_PATH] --> B[initialize.js]
+  B --> C[Build WASM via Solang]
+  B --> D[Deploy to Soroban Network]
+  B --> E[Generate TS Bindings]
+  B --> F[Generate contract-schema.json]
+  D --> G[src/contracts/current.ts]
+  E --> H[packages/<alias>]
+  F --> I[UI Auto-Forms]
+  G --> I
+  H --> I
 ```
 
-## Contract
-The example contract is in:
-- `solidity-contracts/newcontract/contract.sol`
+**Why `initialize.js` Is Mandatory**
+The frontend has no hardcoded contract methods. It depends on generated artifacts created by `initialize.js`:
+- Contract WASM build and deployment (Solang -> Soroban WASM; without this there is no live contract to call).
+- Generated TypeScript bindings in `packages/*` (without these the client cannot call methods).
+- `src/contracts/current.ts` (points the UI at the correct contract ID and network).
+- `src/generated/contract-schema.json` (drives the auto-generated form inputs).
 
-## Notes
-- If you update the Solidity contract, re-run `node initialize.js` to rebuild, redeploy, and regenerate bindings.
+If you skip `initialize.js`, the UI won’t know which contract to call or which inputs to render.
+
+**Working With Solidity Contracts**
+- Put your Solidity contracts inside the directory specified by `PUBLIC_STELLAR_CONTRACT_PATH`.
+- Set `PUBLIC_SOLANG_SOURCE` to the Solidity entry file (default `contract.sol`).
+- When you change contract code, re-run `node initialize.js` or `pnpm run dev` to rebuild, redeploy, and regenerate bindings + schema.
+- To switch contracts, redeploy and `initialize.js` will update `src/contracts/current.ts`.
+
+**Important Paths**
+- Solidity contracts: `PUBLIC_STELLAR_CONTRACT_PATH` in `.env`
+- Solang entry file: `PUBLIC_SOLANG_SOURCE` in `.env`
+- Generated bindings: `solang-template-solid/packages/<contract-alias>`
+- Current contract client: `solang-template-solid/src/contracts/current.ts`
+- Contract UI schema: `solang-template-solid/src/generated/contract-schema.json`

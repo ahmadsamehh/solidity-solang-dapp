@@ -1,25 +1,20 @@
-contract math {
-  function max(uint64 a, uint64 b) public returns (uint64) {
-    if (a > b) {
-      return a;
-    } else {
-      return b;
-    }
+pragma solidity 0;
+
+contract incrementer {
+  uint64 private value;
+
+  /// Initializes the value to the given init_value.
+  function initialize(uint64 initvalue) public {
+    value = initvalue;
   }
 
-  function max(uint64 a, uint64 b, uint64 c) public returns (uint64) {
-    if (a > b) {
-      if (a > c) {
-        return a;
-      } else {
-        return c;
-      }
-    } else {
-      if (b > c) {
-        return b;
-      } else {
-        return c;
-      }
-    }
+  /// This increments the value by by.
+  function inc(uint64 by) public {
+    value += by;
+  }
+
+  /// Simply returns the current value of our uint64.
+  function get() public view returns (uint64) {
+    return value;
   }
 }
