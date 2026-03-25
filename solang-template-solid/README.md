@@ -1,8 +1,6 @@
-# Soroban Solid Template (Rust Contracts)
+# Soroban Solid Template (Solidity Contracts)
 
-This repository is a SolidJS frontend that auto-generates a contract UI from Soroban (Rust) contracts. It builds, deploys, and binds your Rust contracts, then renders a form for each method.
-
-Note: We will create another branch for Solidity contracts. This branch is strictly for Soroban/Rust contracts.
+This repository is a SolidJS frontend that auto-generates a contract UI from Soroban-compatible Solidity contracts (compiled with Solang). It builds, deploys, and binds your Solidity contracts, then renders a form for each method.
 
 **Features**
 - Auto-generated UI forms from contract interface
@@ -19,7 +17,7 @@ Note: We will create another branch for Solidity contracts. This branch is stric
 
 **Prerequisites**
 - Node.js + npm (or pnpm/yarn)
-- Rust toolchain
+- Solang compiler (`solang`)
 - Stellar CLI (`stellar`) with Soroban support
 - Access to a Soroban network (testnet by default)
 
@@ -35,6 +33,8 @@ PUBLIC_STELLAR_NETWORK_PASSPHRASE="Test SDF Network ; September 2015"
 PUBLIC_STELLAR_RPC_URL="https://soroban-testnet.stellar.org"
 PUBLIC_STELLAR_ACCOUNT="test1"
 PUBLIC_STELLAR_CONTRACT_PATH="../mycontract"
+PUBLIC_SOLANG_SOURCE="contract.sol"
+PUBLIC_SOLANG_OUTDIR="build"
 ```
 3. Initialize + run (single command)
 ```bash
@@ -48,8 +48,8 @@ pnpm run dev
 ```
 
 **Program Flow**
-1. `initialize.js` builds the Rust contracts in `PUBLIC_STELLAR_CONTRACT_PATH`.
-2. It deploys each contract to the configured Stellar network and captures the deployed contract IDs.
+1. `initialize.js` compiles the Solidity contracts in `PUBLIC_STELLAR_CONTRACT_PATH` using Solang (target `soroban`).
+2. It deploys each compiled WASM contract to the configured Stellar network and captures the deployed contract IDs.
 3. It generates TypeScript bindings for each contract in `packages/<alias>` and installs them into the app.
 4. It writes contract clients to `src/contracts/<alias>.ts` and updates `src/contracts/current.ts` to point at the latest deployed contract.
 5. It generates `src/generated/contract-schema.json` from the contract interface.
@@ -72,20 +72,22 @@ flowchart TD
 
 **Why `initialize.js` Is Mandatory**
 The frontend has no hardcoded contract methods. It depends on generated artifacts created by `initialize.js`:
-- Contract WASM build and deployment (without this there is no live contract to call).
+- Contract WASM build and deployment (Solang -> Soroban WASM; without this there is no live contract to call).
 - Generated TypeScript bindings in `packages/*` (without these the client cannot call methods).
 - `src/contracts/current.ts` (points the UI at the correct contract ID and network).
 - `src/generated/contract-schema.json` (drives the auto-generated form inputs).
 
 If you skip `initialize.js`, the UI won’t know which contract to call or which inputs to render.
 
-**Working With Rust Contracts**
-- Put your Soroban Rust contracts inside the directory specified by `PUBLIC_STELLAR_CONTRACT_PATH`.
+**Working With Solidity Contracts**
+- Put your Solidity contracts inside the directory specified by `PUBLIC_STELLAR_CONTRACT_PATH`.
+- Set `PUBLIC_SOLANG_SOURCE` to the Solidity entry file (default `contract.sol`).
 - When you change contract code, re-run `node initialize.js` to rebuild, redeploy, and regenerate bindings + schema.
 - To switch contracts, just redeploy and `initialize.js` will update `src/contracts/current.ts`.
 
 **Important Paths**
-- Rust contracts: `PUBLIC_STELLAR_CONTRACT_PATH` in `.env`
+- Solidity contracts: `PUBLIC_STELLAR_CONTRACT_PATH` in `.env`
+- Solang entry file: `PUBLIC_SOLANG_SOURCE` in `.env`
 - Generated bindings: `packages/<contract-alias>`
 - Current contract client: `src/contracts/current.ts`
 - Contract UI schema: `src/generated/contract-schema.json`
