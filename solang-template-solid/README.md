@@ -4,15 +4,29 @@ This repository is a SolidJS frontend that auto-generates a contract UI from Sor
 
 Note: We will create another branch for Solidity contracts. This branch is strictly for Soroban/Rust contracts.
 
+**Features**
+- Auto-generated UI forms from contract interface
+- One-command build + deploy + binding generation
+- TypeScript contract clients and bindings
+- Live network targeting via `.env`
+- Schema-driven UI rendering (no hardcoded methods)
+
+**Screenshots**
+> Add your images here and update the paths.
+
+![Contract Incrementer](screenshots/a.png)
+![Contract Math](screenshots/b.png)
+
 **Prerequisites**
 - Node.js + npm (or pnpm/yarn)
 - Rust toolchain
 - Stellar CLI (`stellar`) with Soroban support
+- Access to a Soroban network (testnet by default)
 
-**Quick Start**
+**Quick Start (pnpm)**
 1. Install dependencies
 ```bash
-npm install
+pnpm install
 ```
 2. Configure `.env`
 ```bash
@@ -22,13 +36,15 @@ PUBLIC_STELLAR_RPC_URL="https://soroban-testnet.stellar.org"
 PUBLIC_STELLAR_ACCOUNT="test1"
 PUBLIC_STELLAR_CONTRACT_PATH="../mycontract"
 ```
-3. Initialize contracts (mandatory)
+3. Initialize + run (single command)
+```bash
+pnpm run dev
+```
+
+**Manual Run (step-by-step)**
 ```bash
 node initialize.js
-```
-4. Run the app
-```bash
-npm run dev
+pnpm run dev
 ```
 
 **Program Flow**
@@ -38,6 +54,21 @@ npm run dev
 4. It writes contract clients to `src/contracts/<alias>.ts` and updates `src/contracts/current.ts` to point at the latest deployed contract.
 5. It generates `src/generated/contract-schema.json` from the contract interface.
 6. The UI in `src/App.tsx` reads `contract-schema.json` to render dynamic forms and uses `src/contracts/current.ts` to call the deployed contract.
+
+**Flow Diagram**
+```mermaid
+flowchart TD
+  A[Contracts in PUBLIC_STELLAR_CONTRACT_PATH] --> B[initialize.js]
+  B --> C[Build WASM]
+  B --> D[Deploy to Soroban Network]
+  B --> E[Generate TS Bindings]
+  B --> F[Generate contract-schema.json]
+  D --> G[src/contracts/current.ts]
+  E --> H[packages/<alias>]
+  F --> I[UI Auto-Forms]
+  G --> I
+  H --> I
+```
 
 **Why `initialize.js` Is Mandatory**
 The frontend has no hardcoded contract methods. It depends on generated artifacts created by `initialize.js`:
@@ -60,6 +91,6 @@ If you skip `initialize.js`, the UI won’t know which contract to call or which
 - Contract UI schema: `src/generated/contract-schema.json`
 
 **Scripts**
-- `npm run dev` or `npm start`: start dev server
-- `npm run build`: production build
-- `npm run serve`: preview production build
+- `pnpm run dev`: initialize contracts then start dev server
+- `pnpm run build`: production build
+- `pnpm run serve`: preview production build
