@@ -8,15 +8,18 @@ importers:
 
   .:
     dependencies:
+      '@stellar/stellar-sdk':
+        specifier: ^14.6.1
+        version: 14.6.1
       dotenv:
         specifier: ^17.3.1
         version: 17.3.1
       glob:
         specifier: ^13.0.6
         version: 13.0.6
-      math:
-        specifier: file:packages/math
-        version: file:packages/math
+      incrementer:
+        specifier: file:packages/incrementer
+        version: file:packages/incrementer
       solid-js:
         specifier: ^1.9.5
         version: 1.9.12
@@ -766,6 +769,9 @@ packages:
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
 
+  incrementer@file:packages/incrementer:
+    resolution: {directory: packages/incrementer, type: directory}
+
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
 
@@ -823,9 +829,6 @@ packages:
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
-
-  math@file:packages/math:
-    resolution: {directory: packages/math, type: directory}
 
   merge-anything@5.1.7:
     resolution: {integrity: sha512-eRtbOb1N5iyH0tkQDAoQ4Ipsp/5qSR79Dzrz8hEPxRX10RWWR/iQXdoKmBSRCThY1Fh5EhISDtpSc93fpxUniQ==}
@@ -1709,6 +1712,13 @@ snapshots:
 
   ieee754@1.2.1: {}
 
+  incrementer@file:packages/incrementer:
+    dependencies:
+      '@stellar/stellar-sdk': 14.6.1
+      buffer: 6.0.3
+    transitivePeerDependencies:
+      - debug
+
   inherits@2.0.4: {}
 
   is-arguments@1.2.0:
@@ -1756,13 +1766,6 @@ snapshots:
       yallist: 3.1.1
 
   math-intrinsics@1.1.0: {}
-
-  math@file:packages/math:
-    dependencies:
-      '@stellar/stellar-sdk': 14.6.1
-      buffer: 6.0.3
-    transitivePeerDependencies:
-      - debug
 
   merge-anything@5.1.7:
     dependencies:

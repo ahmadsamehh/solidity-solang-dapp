@@ -34,7 +34,7 @@ if (typeof window !== "undefined") {
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId: "CDNZX52NU7PDKFXDPYBJGTZVVEBFEQEP56KUGV7ONXONRZLX26HLAAPT",
+    contractId: "CAES3W6YA7LCCDKSLGVXZ4UIA3TBZXOQZZBE7BHW7UYAW6VAEK52DTW5",
   }
 } as const
 
@@ -46,9 +46,9 @@ export interface Client {
   constructor: (options?: MethodOptions) => Promise<AssembledTransaction<null>>
 
   /**
-   * Construct and simulate a init transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Construct and simulate a initialize transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
-  init: ({initvalue}: {initvalue: u64}, options?: MethodOptions) => Promise<AssembledTransaction<void>>
+  initialize: ({initvalue}: {initvalue: u64}, options?: MethodOptions) => Promise<AssembledTransaction<void>>
 
   /**
    * Construct and simulate a inc transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -79,7 +79,7 @@ export class Client extends ContractClient {
   constructor(public readonly options: ContractClientOptions) {
     super(
       new ContractSpec([ "AAAAAAAAAAAAAAALY29uc3RydWN0b3IAAAAAAAAAAAA=",
-        "AAAAAAAAAAAAAAAEaW5pdAAAAAEAAAAAAAAACWluaXR2YWx1ZQAAAAAAAAYAAAABAAAAAg==",
+        "AAAAAAAAAAAAAAAKaW5pdGlhbGl6ZQAAAAAAAQAAAAAAAAAJaW5pdHZhbHVlAAAAAAAABgAAAAEAAAAC",
         "AAAAAAAAAAAAAAADaW5jAAAAAAEAAAAAAAAAAmJ5AAAAAAAGAAAAAQAAAAI=",
         "AAAAAAAAAAAAAAADZ2V0AAAAAAAAAAABAAAABg==",
         "AAAAAAAAAAAAAAANX19jb25zdHJ1Y3RvcgAAAAAAAAAAAAABAAAAAg==" ]),
@@ -88,7 +88,7 @@ export class Client extends ContractClient {
   }
   public readonly fromJSON = {
     constructor: this.txFromJSON<null>,
-        init: this.txFromJSON<void>,
+        initialize: this.txFromJSON<void>,
         inc: this.txFromJSON<void>,
         get: this.txFromJSON<u64>
   }

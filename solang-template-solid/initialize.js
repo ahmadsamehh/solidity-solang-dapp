@@ -11,6 +11,17 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { sync as glob } from "glob";
 import { promisify } from "util";
+import {
+  rpc as SorobanRpc,
+  Keypair,
+  StrKey,
+  Address,
+  scValToNative,
+  TransactionBuilder,
+  Operation,
+  BASE_FEE,
+  Networks,
+} from "@stellar/stellar-sdk";
 
 const __filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(__filename);
@@ -44,6 +55,88 @@ const packageJsonPath = path.join(dirname, "package.json");
 let smartContracts = [];
 
 const execAsync = promisify(exec);
+const rpcServer = new SorobanRpc.Server(process.env.PUBLIC_STELLAR_RPC_URL, {
+  allowHttp:
+    process.env.PUBLIC_STELLAR_NETWORK === "local" ||
+    process.env.PUBLIC_STELLAR_NETWORK === "standalone",
+});
+
+const networkPassphrase =
+  process.env.PUBLIC_STELLAR_NETWORK_PASSPHRASE || Networks.TESTNET;
+
+function resolveKeypair() {
+  const secret =
+    process.env.STELLAR_SECRET_KEY || process.env.PUBLIC_STELLAR_SECRET_KEY;
+
+  if (!secret) {
+    throw new Error(
+      "STELLAR_SECRET_KEY is required to sign Soroban transactions. Add it to .env."
+    );
+  }
+
+  return Keypair.fromSecret(secret);
+}
+
+function resolvePublicKey(keypair) {
+  const configured = process.env.PUBLIC_STELLAR_ACCOUNT;
+
+  if (configured && StrKey.isValidEd25519PublicKey(configured)) {
+    if (configured !== keypair.publicKey()) {
+      throw new Error(
+        "PUBLIC_STELLAR_ACCOUNT does not match STELLAR_SECRET_KEY. Update PUBLIC_STELLAR_ACCOUNT to the secret's public key."
+      );
+    }
+    return configured;
+  }
+
+  return keypair.publicKey();
+}
+
+async function ensureAccountExists(publicKey) {
+  try {
+    await rpcServer.getAccount(publicKey);
+    console.log(`Using existing Stellar account ${publicKey}.`);
+    return;
+  } catch (err) {
+    if (process.env.PUBLIC_STELLAR_NETWORK === "testnet") {
+      console.log(`Funding testnet account ${publicKey} via friendbot...`);
+      await rpcServer.fundAddress(publicKey);
+      return;
+    }
+
+    throw new Error(
+      `Account ${publicKey} not found. Fund it or switch to testnet for friendbot.`
+    );
+  }
+}
+
+async function submitTransaction(tx, label) {
+  const preparedTx = await rpcServer.prepareTransaction(tx);
+  preparedTx.sign(activeKeypair);
+
+  const sendResponse = await rpcServer.sendTransaction(preparedTx);
+
+  if (sendResponse.status === "ERROR") {
+    throw new Error(
+      `${label} transaction failed to submit. Check diagnostics on the RPC server.`
+    );
+  }
+
+  const txResult = await rpcServer.pollTransaction(sendResponse.hash, {
+    attempts: 60,
+  });
+
+  if (txResult.status !== SorobanRpc.Api.GetTransactionStatus.SUCCESS) {
+    throw new Error(
+      `${label} transaction failed with status ${txResult.status}.`
+    );
+  }
+
+  return txResult;
+}
+
+const activeKeypair = resolveKeypair();
+const activePublicKey = resolvePublicKey(activeKeypair);
 
 // ###################### Helpers ########################
 
@@ -109,33 +202,8 @@ function syncLocalPackageDependencies(aliases) {
 
 // ###################### Create User ########################
 
-function createUser() {
-  const alias = process.env.PUBLIC_STELLAR_ACCOUNT;
-  const network = process.env.PUBLIC_STELLAR_NETWORK;
-
-  try {
-    execSync(`stellar keys generate --fund ${alias} --network ${network}`, {
-      stdio: "pipe",
-      encoding: "utf8",
-    });
-
-    console.log(`Created and funded Stellar identity "${alias}".`);
-  } catch (err) {
-    const msg = `${err?.stdout || ""}\n${err?.stderr || ""}\n${
-      err?.message || ""
-    }`;
-
-    if (msg.toLowerCase().includes("already exists")) {
-      console.log(
-        `‼️ Stellar identity "${alias}" already exists. Using it directly.`
-      );
-      return;
-    }
-
-    console.error("Failed to create Stellar identity:");
-    console.error(msg);
-    throw err;
-  }
+async function createUser() {
+  await ensureAccountExists(activePublicKey);
 }
 
 // ###################### Build Contracts ########################
@@ -185,18 +253,58 @@ function buildAll() {
 
 async function deploy(wasm) {
   const alias = filenameNoExtension(wasm);
+  const wasmBuffer = readFileSync(wasm);
 
-  const { stdout } = await execAsync(
-    `stellar contract deploy --wasm "${wasm}" --ignore-checks --alias ${alias} --source ${process.env.PUBLIC_STELLAR_ACCOUNT} --network ${process.env.PUBLIC_STELLAR_NETWORK} --rpc-url ${process.env.PUBLIC_STELLAR_RPC_URL} --network-passphrase "${process.env.PUBLIC_STELLAR_NETWORK_PASSPHRASE}"`
-  );
+  const uploadAccount = await rpcServer.getAccount(activePublicKey);
+  const uploadTx = new TransactionBuilder(uploadAccount, {
+    fee: BASE_FEE,
+    networkPassphrase,
+  })
+    .addOperation(Operation.uploadContractWasm({ wasm: wasmBuffer }))
+    .setTimeout(0)
+    .build();
+
+  const uploadResult = await submitTransaction(uploadTx, `upload ${alias}`);
+  const uploadedHash = uploadResult.returnValue
+    ? scValToNative(uploadResult.returnValue)
+    : null;
+
+  if (!uploadedHash) {
+    throw new Error(`Upload did not return a wasm hash for ${alias}.`);
+  }
+
+  const wasmHash = Buffer.from(uploadedHash);
+
+  const deployAccount = await rpcServer.getAccount(activePublicKey);
+  const createTx = new TransactionBuilder(deployAccount, {
+    fee: BASE_FEE,
+    networkPassphrase,
+  })
+    .addOperation(
+      Operation.createCustomContract({
+        address: new Address(activePublicKey),
+        wasmHash,
+      })
+    )
+    .setTimeout(0)
+    .build();
+
+  const createResult = await submitTransaction(createTx, `deploy ${alias}`);
+  const contractId = createResult.returnValue
+    ? scValToNative(createResult.returnValue)
+    : null;
+
+  if (typeof contractId !== "string") {
+    throw new Error(`Deploy did not return a contract ID for ${alias}.`);
+  }
 
   smartContracts.push({
     alias,
     wasm,
-    contractid: stdout.trim(),
+    contractid: contractId,
   });
 
-  console.log(`Deployed ${alias}`);
+  console.log(`Deployed ${alias} -> ${contractId}`);
 }
 
 async function deployAll() {
@@ -446,7 +554,7 @@ async function generateSchemaAll() {
 // ###################### Main ########################
 
 async function main() {
-  createUser();
+  await createUser();
   buildAll();
   await deployAll();
   await bindAll();
